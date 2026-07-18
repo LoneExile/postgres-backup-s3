@@ -1,5 +1,11 @@
 # postgres-backup-s3
 
+[![build](https://github.com/LoneExile/postgres-backup-s3/actions/workflows/build.yml/badge.svg)](https://github.com/LoneExile/postgres-backup-s3/actions/workflows/build.yml)
+[![release](https://img.shields.io/github/v/release/LoneExile/postgres-backup-s3?sort=semver)](https://github.com/LoneExile/postgres-backup-s3/releases)
+[![ghcr.io](https://img.shields.io/badge/ghcr.io-postgres--backup--s3-2496ED?logo=docker&logoColor=white)](https://github.com/LoneExile/postgres-backup-s3/pkgs/container/postgres-backup-s3)
+[![license](https://img.shields.io/github/license/LoneExile/postgres-backup-s3)](LICENSE)
+[![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen?logo=renovatebot)](https://developer.mend.io/github/LoneExile/postgres-backup-s3)
+
 Tiny, scheduler-agnostic PostgreSQL → S3 backup container. It takes a logical
 `pg_dump` of one or more databases, gzips it, **streams** it straight to any
 S3-compatible object store, prunes old backups, and (optionally) reports metrics
@@ -79,6 +85,18 @@ docker run --rm \
   ghcr.io/loneexile/postgres-backup-s3:latest
 ```
 
+Example output:
+
+```text
+[pg-backup] discovered databases: app analytics
+[pg-backup] dumping db.example.com/app -> s3://my-pg-backups/prod/app/app-20260101T030000Z.sql.gz
+[pg-backup] OK app (4128272 bytes)
+[pg-backup] dumping db.example.com/analytics -> s3://my-pg-backups/prod/analytics/analytics-20260101T030000Z.sql.gz
+[pg-backup] OK analytics (91544 bytes)
+[pg-backup] pruning store/my-pg-backups/prod/ older than 14d
+[pg-backup] metrics pushed
+```
+
 ### Scheduling
 
 The container runs once and exits. Pick a scheduler:
@@ -135,6 +153,16 @@ docker buildx build --platform linux/amd64,linux/arm64 -t postgres-backup-s3 .
 The image pins the `mc` release and installs `postgresql17-client`. To back up a
 server older than the client you can dump with a newer client, but if you need an
 exact match, change `postgresql17-client` in the `Dockerfile`.
+
+## Dependency updates
+
+The Alpine base digest, the pinned `mc` release, and the GitHub Actions are kept
+current by [Renovate](https://docs.renovatebot.com/) via `renovate.json`. For it
+to open PRs here, enable the free
+[Mend Renovate GitHub App](https://github.com/apps/renovate) on the repo (or run
+Renovate self-hosted). Prefer zero-setup native updates? Delete `renovate.json`
+and add a `.github/dependabot.yml` — Dependabot covers the Docker base image and
+Actions, but not the custom `mc` release pin.
 
 ## License
 
