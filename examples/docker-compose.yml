@@ -1,0 +1,32 @@
+# Scheduled backups with Docker Compose using ofelia as the scheduler.
+# (The backup image itself runs once and exits — ofelia triggers it on a cron.)
+#
+#   docker compose run --rm backup   # run once, on demand
+#   docker compose up -d ofelia      # then daily at 03:00 (see label below)
+services:
+  backup:
+    image: ghcr.io/loneexile/postgres-backup-s3:latest
+    environment:
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: secret
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: pg-backups
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_PREFIX: prod
+      KEEP_DAYS: "14"
+      # DATABASES: "app analytics"   # omit to auto-discover every database
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-run.backup.schedule: "0 0 3 * * *"
+      ofelia.job-run.backup.container: "true"
+    restart: "no"
+
+  ofelia:
+    image: mcuadros/ofelia:latest
+    depends_on: [backup]
+    command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
