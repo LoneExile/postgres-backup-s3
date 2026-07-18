@@ -32,8 +32,8 @@ Being scheduler-agnostic is the point: in Kubernetes you almost always want a
 `CronJob` (native retries, history, RBAC, per-namespace secrets) rather than a
 long-lived container running its own cron loop.
 
-If you need **at-rest encryption** (gpg), that's the one feature the older tools
-have that this doesn't — PRs welcome.
+Optional **gpg AES-256 at-rest encryption** (`PASSPHRASE`) is supported too, so
+the only real trade-off versus the older tools is the lack of a built-in cron.
 
 ## Configuration
 
@@ -54,6 +54,7 @@ All configuration is via environment variables.
 | `S3_PREFIX` | | `postgres` | Key prefix + Pushgateway instance label |
 | `KEEP_DAYS` | | `7` | Retention window; older objects pruned each run |
 | `PUSHGATEWAY_URL` | | *(off)* | If set, push `pg_backup_*` metrics here |
+| `PASSPHRASE` | | *(off)* | If set, encrypt each dump with gpg AES-256 (object gets a `.gpg` suffix) |
 
 Objects are written to:
 
@@ -101,6 +102,11 @@ mc alias set store "$S3_ENDPOINT" "$S3_ACCESS_KEY" "$S3_SECRET_KEY"
 mc ls --recursive store/my-pg-backups/prod/mydb/
 # The dump was made with --clean --if-exists, so it drops+recreates objects:
 mc cat store/my-pg-backups/prod/mydb/mydb-20260101T030000Z.sql.gz \
+  | gunzip | psql -h db.example.com -U postgres -d mydb
+
+# If PASSPHRASE was set, objects end in .sql.gz.gpg — decrypt first:
+mc cat store/my-pg-backups/prod/mydb/mydb-20260101T030000Z.sql.gz.gpg \
+  | gpg --batch --quiet --decrypt --pinentry-mode loopback --passphrase-fd 3 3<<<"$PASSPHRASE" \
   | gunzip | psql -h db.example.com -U postgres -d mydb
 ```
 

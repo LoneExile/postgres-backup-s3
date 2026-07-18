@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Keep the Alpine base image digest-pinned and current.",
+      "matchManagers": ["dockerfile"],
+      "pinDigests": true
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Track the pinned MinIO client (mc) release in the Dockerfile.",
+      "customType": "regex",
+      "fileMatch": ["(^|/)Dockerfile$"],
+      "matchStrings": ["mc\\.(?<currentValue>RELEASE\\.[0-9TZ-]+)"],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "minio/mc",
+      "versioningTemplate": "loose"
+    }
+  ]
+}

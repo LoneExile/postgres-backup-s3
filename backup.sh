@@ -22,6 +22,7 @@
 #   S3_PREFIX=postgres           key prefix + Pushgateway instance label
 #   KEEP_DAYS=7                  retention window (older objects pruned each run)
 #   PUSHGATEWAY_URL=""           optional; if set, push size/success metrics
+#   PASSPHRASE=""                optional; if set, encrypt dumps with gpg AES-256
 set -euo pipefail
 
 : "${PGHOST:?}" "${PGUSER:?}" "${PGPASSWORD:?}"
@@ -43,14 +44,26 @@ fi
 mc alias set store "$S3_ENDPOINT" "$S3_ACCESS_KEY" "$S3_SECRET_KEY" >/dev/null
 mc mb --ignore-existing "store/$S3_BUCKET" >/dev/null
 
+# Optional symmetric encryption (AES-256) when PASSPHRASE is set — the object
+# then gets a .gpg suffix. Decrypt on restore with the same passphrase.
+maybe_encrypt() {
+  if [ -n "${PASSPHRASE:-}" ]; then
+    gpg --symmetric --batch --yes --cipher-algo AES256 --pinentry-mode loopback \
+        --passphrase-fd 3 -o - 3<<<"$PASSPHRASE"
+  else
+    cat
+  fi
+}
+
 ts="$(date -u +%Y%m%dT%H%M%SZ)"
 rc=0
 metrics=""
 for db in $DATABASES; do
-  key="$S3_PREFIX/$db/$db-$ts.sql.gz"
+  key="$S3_PREFIX/$db/$db-$ts.sql.gz${PASSPHRASE:+.gpg}"
   echo "[pg-backup] dumping $PGHOST/$db -> s3://$S3_BUCKET/$key"
   if pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$db" --no-owner --no-privileges --clean --if-exists \
       | gzip -c \
+      | maybe_encrypt \
       | mc pipe "store/$S3_BUCKET/$key"; then
     sz="$(mc stat --json "store/$S3_BUCKET/$key" 2>/dev/null | grep -o '"size":[0-9]*' | head -1 | cut -d: -f2)"
     echo "[pg-backup] OK $db (${sz:-0} bytes)"

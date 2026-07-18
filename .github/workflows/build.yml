@@ -54,3 +54,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Clean 2-arch index (no unknown/unknown attestation manifests).
+          provenance: false
+          sbom: false
