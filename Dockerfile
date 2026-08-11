@@ -2,11 +2,10 @@
 # postgres-backup-s3 — logical pg_dump backups streamed to any S3-compatible
 # store. Multi-arch (linux/amd64 + linux/arm64). Build with `docker buildx`.
 # Digest pins the multi-arch index (Renovate/Dependabot keep it current).
-FROM alpine:3.21@sha256:48b0309ca019d89d40f670aa1bc06e426dc0931948452e8491e3d65087abc07d
-
-# postgresql18-client — pg_dump must be >= the server's major version. Bump this
-# (e.g. postgresql17-client) if you back up an older server; a newer client can
-# always dump an older server, but not vice-versa.
+# postgresql18-client only exists in alpine 3.23+ (3.21/3.22 lack it); the
+# pg_dump major must be >= the server's major. A newer client can always dump
+# an older server, but not vice-versa (harbor-db is PG18, the rest PG17).
+FROM alpine:3.23@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
 RUN apk add --no-cache postgresql18-client ca-certificates bash coreutils gzip tzdata curl gnupg
 
 # MinIO client (mc) for S3 I/O — pinned release, baked at build time (never
