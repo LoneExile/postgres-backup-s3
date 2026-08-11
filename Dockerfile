@@ -4,10 +4,10 @@
 # Digest pins the multi-arch index (Renovate/Dependabot keep it current).
 FROM alpine:3.21@sha256:48b0309ca019d89d40f670aa1bc06e426dc0931948452e8491e3d65087abc07d
 
-# postgresql17-client — pg_dump must be >= the server's major version. Bump this
-# (e.g. postgresql16-client) if you back up an older server; a newer client can
+# postgresql18-client — pg_dump must be >= the server's major version. Bump this
+# (e.g. postgresql17-client) if you back up an older server; a newer client can
 # always dump an older server, but not vice-versa.
-RUN apk add --no-cache postgresql17-client ca-certificates bash coreutils gzip tzdata curl gnupg
+RUN apk add --no-cache postgresql18-client ca-certificates bash coreutils gzip tzdata curl gnupg
 
 # MinIO client (mc) for S3 I/O — pinned release, baked at build time (never
 # fetched at runtime; a floating fetch inside a backup job risks silent failure).
