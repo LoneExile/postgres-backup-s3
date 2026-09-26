@@ -11,10 +11,10 @@
   ],
   "customManagers": [
     {
-      "description": "Track the pinned MinIO client (mc) release in the Dockerfile.",
+      "description": "Track the pinned MinIO client (mc) release in the Dockerfile's GitHub release URL (the match covers both occurrences of the release in the URL). Its per-arch sha256 values are hard-coded next to it, so an update PR fails the build until they are bumped too.",
       "customType": "regex",
       "fileMatch": ["(^|/)Dockerfile$"],
-      "matchStrings": ["mc\\.(?<currentValue>RELEASE\\.[0-9TZ-]+)"],
+      "matchStrings": ["github\\.com/minio/mc/releases/download/(?<currentValue>RELEASE\\.[0-9TZ-]+)/mc\\.linux-\\$\\{TARGETARCH\\}\\.RELEASE\\.[0-9TZ-]+"],
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "minio/mc",
       "versioningTemplate": "loose"

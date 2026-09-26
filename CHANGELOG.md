@@ -18,6 +18,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   backups and never leaves an empty object. The `FAILED dumping <db>` log line,
   exit code `1`, and metrics of a failed run are unchanged, as is everything
   about a fully successful run.
+- **Image build:** `dl.min.io` now returns `410 Gone` (MinIO archived `mc`), so
+  the pinned `mc` release (`RELEASE.2025-08-13T08-35-41Z`, same binary) is now
+  fetched from its GitHub release assets and verified against hard-coded
+  per-arch sha256 checksums at build time.
 
 ### Added
 - `tests/backup_test.sh`: hermetic test of the failure-path guarantees (stubbed

@@ -10,10 +10,20 @@ RUN apk add --no-cache postgresql18-client ca-certificates bash coreutils gzip t
 
 # MinIO client (mc) for S3 I/O — pinned release, baked at build time (never
 # fetched at runtime; a floating fetch inside a backup job risks silent failure).
-# TARGETARCH is set by buildx (amd64 / arm64) and matches MinIO's release paths.
+# Fetched from the minio/mc GitHub release assets: dl.min.io returns 410 Gone
+# since MinIO archived mc. TARGETARCH is set by buildx (amd64 / arm64) and
+# matches the asset names. The per-arch sha256 values are hard-coded (checked
+# against the release's published .sha256sum assets) and verified here, so
+# bump them together with the release.
 ARG TARGETARCH
-ADD https://dl.min.io/client/mc/release/linux-${TARGETARCH}/archive/mc.RELEASE.2025-08-13T08-35-41Z /usr/local/bin/mc
-RUN chmod +x /usr/local/bin/mc && adduser -D -u 10001 backup
+ADD https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-${TARGETARCH}.RELEASE.2025-08-13T08-35-41Z /usr/local/bin/mc
+RUN case "$TARGETARCH" in \
+      amd64) sum=01f866e9c5f9b87c2b09116fa5d7c06695b106242d829a8bb32990c00312e891 ;; \
+      arm64) sum=14c8c9616cfce4636add161304353244e8de383b2e2752c0e9dad01d4c27c12c ;; \
+      *) echo "no pinned mc sha256 for TARGETARCH=$TARGETARCH" >&2; exit 1 ;; \
+    esac \
+ && echo "$sum  /usr/local/bin/mc" | sha256sum -c - \
+ && chmod +x /usr/local/bin/mc && adduser -D -u 10001 backup
 
 COPY backup.sh /usr/local/bin/backup.sh
 RUN chmod +x /usr/local/bin/backup.sh
