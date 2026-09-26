@@ -58,7 +58,7 @@ All configuration is via environment variables.
 | `S3_ACCESS_KEY` | ✅ | | |
 | `S3_SECRET_KEY` | ✅ | | |
 | `S3_PREFIX` | | `postgres` | Key prefix + Pushgateway instance label |
-| `KEEP_DAYS` | | `7` | Retention window; older objects pruned each run |
+| `KEEP_DAYS` | | `7` | Retention window; older objects pruned after each run in which every dump succeeded |
 | `PUSHGATEWAY_URL` | | *(off)* | If set, push `pg_backup_*` metrics here |
 | `PASSPHRASE` | | *(off)* | If set, encrypt each dump with gpg AES-256 (object gets a `.gpg` suffix) |
 
@@ -71,6 +71,20 @@ s3://<S3_BUCKET>/<S3_PREFIX>/<db>/<db>-<UTC-timestamp>.sql.gz
 Dumps use `--no-owner --no-privileges --clean --if-exists`, so a restore drops
 and recreates objects and doesn't depend on matching role names — and being
 *logical* dumps, they restore across PostgreSQL major versions.
+
+## Failure safety
+
+**A failing backup never deletes existing backups and never leaves an empty
+object behind.**
+
+- If a database's dump fails, the object this run was streaming for it is
+  removed (the upload has usually created it already, often as an empty 20-byte
+  gzip). The run still logs `[pg-backup] FAILED dumping <db>`, exits `1`, and
+  pushes `pg_backup_success 0` without `pg_backup_last_success_timestamp_seconds`.
+- If any dump in the run failed, the `KEEP_DAYS` prune is skipped for the whole
+  run (logged as `skipping prune`), so a server that fails night after night
+  keeps its last good backups instead of aging them out. Dumps of the databases
+  that did succeed in that run are kept.
 
 ## Usage
 

@@ -72,12 +72,27 @@ for db in $DATABASES; do
   else
     echo "[pg-backup] FAILED dumping $db" >&2
     rc=1
+    # mc pipe has usually already created the object (at least an empty
+    # 20-byte gzip) — remove it so a failed dump never leaves junk behind.
+    # Best-effort: the object may not exist, and a failure here must not
+    # abort the run before metrics are pushed.
+    if mc rm "store/$S3_BUCKET/$key" >/dev/null 2>&1; then
+      echo "[pg-backup] removed incomplete s3://$S3_BUCKET/$key" >&2
+    else
+      echo "[pg-backup] WARN: could not remove s3://$S3_BUCKET/$key (it may not exist)" >&2
+    fi
   fi
 done
 
-# Retention: delete objects older than KEEP_DAYS under this server's prefix.
-echo "[pg-backup] pruning store/$S3_BUCKET/$S3_PREFIX/ older than ${KEEP_DAYS}d"
-mc rm --recursive --force --older-than "${KEEP_DAYS}d" "store/$S3_BUCKET/$S3_PREFIX/" 2>/dev/null || true
+# Retention: delete objects older than KEEP_DAYS under this server's prefix —
+# only after a fully successful run. Pruning after a failed dump would, after
+# KEEP_DAYS failing nights, delete every good backup and keep nothing.
+if [ $rc -eq 0 ]; then
+  echo "[pg-backup] pruning store/$S3_BUCKET/$S3_PREFIX/ older than ${KEEP_DAYS}d"
+  mc rm --recursive --force --older-than "${KEEP_DAYS}d" "store/$S3_BUCKET/$S3_PREFIX/" 2>/dev/null || true
+else
+  echo "[pg-backup] skipping prune of store/$S3_BUCKET/$S3_PREFIX/: a dump failed this run, keeping existing backups" >&2
+fi
 
 # Publish metrics to a Prometheus Pushgateway (grouped by job=pg_backup,
 # instance=<prefix>). Non-fatal: a Pushgateway outage never fails the backup.

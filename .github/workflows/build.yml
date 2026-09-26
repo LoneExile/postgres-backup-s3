@@ -12,7 +12,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      # shellcheck is preinstalled on ubuntu-latest.
+      - name: shellcheck
+        run: shellcheck --severity=warning backup.sh tests/*.sh
+      - name: Test
+        run: tests/backup_test.sh
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
